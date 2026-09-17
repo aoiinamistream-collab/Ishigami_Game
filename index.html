@@ -3,138 +3,203 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>魔法使いの森 Survival</title>
+<title>魔法使いの館 Survival</title>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101a24;font-family:system-ui,-apple-system,sans-serif;touch-action:none}
-#wrap{position:fixed;inset:0;display:grid;place-items:center}
-canvas{width:100vw;height:100vh;display:block;image-rendering:pixelated;background:#5f9c4c}
-#hud{position:fixed;left:12px;top:max(12px,env(safe-area-inset-top));color:#fff;text-shadow:0 2px 3px #000;font-weight:800;pointer-events:none}
-#hud div{margin:3px 0}
-#touch{display:none}
-@media(pointer:coarse){#touch{display:block}}
-.pad{position:fixed;left:18px;bottom:max(22px,env(safe-area-inset-bottom));width:156px;height:156px}
-.btn{position:absolute;width:52px;height:52px;border-radius:14px;border:2px solid #ffffff99;background:#152235aa;color:#fff;font-size:24px;font-weight:900;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#09070c;touch-action:none;font-family:monospace}
+canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated}
+#hud{position:fixed;z-index:4;left:14px;top:10px;color:#fff;font-weight:900;text-shadow:2px 2px #000;pointer-events:none}
+#title{font-size:20px;margin-bottom:7px}.row{font-size:18px;margin:3px 0}
+#bar{display:inline-block;width:min(270px,45vw);height:16px;background:#251820;border:2px solid #eee;vertical-align:middle}.fill{height:100%;width:100%;background:#d8293e}
+#buff{color:#ffd75d}
+#touch{display:none;position:fixed;inset:0;z-index:10;pointer-events:none}@media(pointer:coarse){#touch{display:block}}
+.pad{position:absolute;left:18px;bottom:22px;width:156px;height:156px;pointer-events:auto}
+.btn{position:absolute;width:52px;height:52px;border:2px solid #ffffffaa;border-radius:13px;background:#121523c0;color:white;display:grid;place-items:center;font-size:24px;font-weight:900;user-select:none;-webkit-user-select:none}
 .up{left:52px}.left{left:0;top:52px}.down{left:52px;top:104px}.right{left:104px;top:52px}
-.actions{position:fixed;right:18px;bottom:max(28px,env(safe-area-inset-bottom));width:170px;height:120px}
-.fire{right:0;top:0;width:72px;height:72px;border-radius:50%;font-size:31px}
-.jump{left:0;bottom:0;width:78px;height:52px;font-size:14px}
-#result{display:none;position:fixed;inset:0;background:#07111bd9;color:#fff;place-items:center;text-align:center}
-#card{background:#14273bea;border:2px solid #ffffff44;border-radius:22px;padding:28px 38px;min-width:240px}
-#card h1{margin:0 0 18px} #card p{font-size:20px;margin:10px}
-#restart{margin-top:16px;padding:12px 24px;border:0;border-radius:12px;font-size:17px;font-weight:800}
+.actions{position:absolute;right:18px;bottom:28px;width:184px;height:126px;pointer-events:auto}
+#fire{right:0;top:0;width:78px;height:78px;border-radius:50%;font-size:32px;background:#7d241fd9}#jump{left:0;bottom:0;width:82px;font-size:13px;background:#1e4b85d9}
+#result{display:none;position:fixed;z-index:30;inset:0;background:#08060be8;color:white;place-items:center;text-align:center}
+.card{padding:30px 40px;min-width:290px;border:2px solid #bd9452;border-radius:16px;background:#18121d}.card h1{color:#ffd56a}.card p{font-size:19px}.card button{padding:12px 24px;border:0;border-radius:9px;font-weight:900;font-size:16px}
 </style>
 </head>
 <body>
-<div id="wrap"><canvas id="game"></canvas></div>
-<div id="hud"><div id="hp">HP 100 / 100</div><div id="score">SCORE 0</div></div>
-<div id="touch">
- <div class="pad">
-  <div class="btn up" data-key="up">▲</div><div class="btn left" data-key="left">◀</div>
-  <div class="btn down" data-key="down">▼</div><div class="btn right" data-key="right">▶</div>
- </div>
- <div class="actions"><div class="btn fire" id="fire">🔥</div><div class="btn jump" id="jump">JUMP</div></div>
+<canvas id="game"></canvas>
+<div id="hud">
+ <div id="title">♜ 魔法使いの館 Survival</div>
+ <div class="row">HP <span id="bar"><span id="hpFill" class="fill"></span></span> <span id="hpText">100 / 100</span></div>
+ <div class="row">SCORE <span id="scoreText">0</span>　HI-SCORE <span id="hiText">0</span></div>
+ <div class="row">TIME <span id="timeText">60:00</span>　<span id="buff">🔥 ×1</span></div>
 </div>
-<div id="result"><div id="card"><h1>RESULT</h1><p id="last"></p><p id="high"></p><button id="restart">もう一度</button></div></div>
+<div id="touch">
+ <div class="pad"><div class="btn up" data-dir="up">▲</div><div class="btn left" data-dir="left">◀</div><div class="btn down" data-dir="down">▼</div><div class="btn right" data-dir="right">▶</div></div>
+ <div class="actions"><div class="btn" id="fire">🔥</div><div class="btn" id="jump">JUMP</div></div>
+</div>
+<div id="result"><div class="card"><h1>RESULT</h1><p id="lastScore"></p><p id="highScore"></p><button id="restart">もう一度</button></div></div>
+
 <script>
-const c=document.getElementById('game'),x=c.getContext('2d');
-let W=0,H=0,D=window.devicePixelRatio||1;
-function resize(){W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0)}
-addEventListener('resize',resize);resize();
+"use strict";
+const C=document.getElementById("game"),G=C.getContext("2d");
+const E=id=>document.getElementById(id);
+const hpFill=E("hpFill"),hpText=E("hpText"),scoreText=E("scoreText"),hiText=E("hiText"),timeText=E("timeText"),buff=E("buff");
+const result=E("result"),lastScore=E("lastScore"),highScore=E("highScore"),restart=E("restart"),fireBtn=E("fire"),jumpBtn=E("jump");
+let W,H,DPR;
+function resize(){W=innerWidth;H=innerHeight;DPR=Math.min(devicePixelRatio||1,2);C.width=W*DPR;C.height=H*DPR;G.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener("resize",resize);resize();
 
-const key={up:0,down:0,left:0,right:0};
-let player,enemies,shots,score,hp,lastSpawn,lastHit,gameOver,jumpT,facing;
+const keys={up:0,down:0,left:0,right:0};
+const LIMIT=3600;
+let p,enemies,shots,pickups,fx,hp,score,elapsed,spawnClock,hitClock,coinClock,ringSpawned,fireLevel,jumpT,magicT,lastDir,over;
+
+let ACtx=null;
+function beep(f,d,type="square",vol=.035,end=null){
+ try{if(!ACtx)ACtx=new (window.AudioContext||window.webkitAudioContext)();if(ACtx.state==="suspended")ACtx.resume();
+ const o=ACtx.createOscillator(),g=ACtx.createGain(),t=ACtx.currentTime;o.type=type;o.frequency.setValueAtTime(f,t);
+ if(end)o.frequency.exponentialRampToValueAtTime(end,t+d);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+ o.connect(g);g.connect(ACtx.destination);o.start(t);o.stop(t+d)}catch(_){}}
+const sJump=()=>beep(310,.17,"square",.035,610);
+const sFire=()=>{beep(170,.12,"sawtooth",.035,440);setTimeout(()=>beep(520,.07,"square",.02,260),55)};
+const sHurt=()=>beep(125,.22,"sawtooth",.055,55);
+const sCoin=()=>{beep(620,.10,"sine",.035,800);setTimeout(()=>beep(850,.13,"sine",.03,1050),90)};
+const sRing=()=>{[440,660,880].forEach((f,i)=>setTimeout(()=>beep(f,.15,"sine",.035,f+100),i*100))};
+
+
+const IMG={};
+function loadImg(name,src){const im=new Image();im.src=src;IMG[name]=im;return im}
+loadImg("mansion","assets/mansion.png");
+loadImg("playerIdle","assets/player_idle.png");
+loadImg("playerDown","assets/player_down.png");
+loadImg("playerUp","assets/player_up.png");
+loadImg("playerLeft","assets/player_left.png");
+loadImg("playerRight","assets/player_right.png");
+loadImg("playerJump","assets/player_jump.png");
+loadImg("playerCast","assets/player_cast.png");
+loadImg("playerDamage","assets/player_damage.png");
+loadImg("enemy","assets/enemy.png");
+loadImg("enemyCrown","assets/enemy_crown.png");
+loadImg("fireball","assets/fireball.png");
+loadImg("magicCircle","assets/magic_circle.png");
+loadImg("coin","assets/coin.png");
+loadImg("ring","assets/ring.png");
+
 function reset(){
- player={x:W/2,y:H/2,r:17}; enemies=[];shots=[];score=0;hp=100;
- lastSpawn=0;lastHit=0;gameOver=false;jumpT=0;facing={x:1,y:0};
- document.getElementById('result').style.display='none'; updateHud();
+ p={x:W/2,y:H/2,r:15};enemies=[];shots=[];pickups=[];fx=[];hp=100;score=0;elapsed=0;spawnClock=0;hitClock=-10;coinClock=0;
+ ringSpawned=false;fireLevel=1;jumpT=0;magicT=0;lastDir={x:1,y:0};over=false;result.style.display="none";hud();
 }
-function updateHud(){hpEl.textContent=`HP ${hp} / 100`;scoreEl.textContent=`SCORE ${score}`}
-const hpEl=document.getElementById('hp'),scoreEl=document.getElementById('score');
-
-function spawn(){
- let side=Math.floor(Math.random()*4),m=35,e={x:0,y:0,r:15,s:55+Math.random()*30};
- if(side===0){e.x=Math.random()*W;e.y=-m} if(side===1){e.x=W+m;e.y=Math.random()*H}
- if(side===2){e.x=Math.random()*W;e.y=H+m} if(side===3){e.x=-m;e.y=Math.random()*H}
+function hud(){
+ hpFill.style.width=hp+"%";hpText.textContent=`${hp} / 100`;scoreText.textContent=score;
+ const hi=+localStorage.getItem("mansionHighScoreV3")||0;hiText.textContent=hi;
+ let r=Math.max(0,Math.ceil(LIMIT-elapsed));timeText.textContent=`${Math.floor(r/60)}:${String(r%60).padStart(2,"0")}`;buff.textContent=`🔥 ×${fireLevel}`;
+}
+function edgeSpawn(){
+ let side=Math.floor(Math.random()*4),m=35,boss=Math.random()<.18,e={x:0,y:0,r:boss?18:15,s:(boss?42:52)+Math.random()*30,hp:boss?2:1,boss};
+ if(side===0){e.x=Math.random()*W;e.y=-m}else if(side===1){e.x=W+m;e.y=Math.random()*H}else if(side===2){e.x=Math.random()*W;e.y=H+m}else{e.x=-m;e.y=Math.random()*H}
  enemies.push(e);
 }
-function attack(tx,ty){
- if(gameOver)return;
- let dx=tx-player.x,dy=ty-player.y,l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;facing={x:dx,y:dy};
- shots.push({x:player.x+dx*23,y:player.y+dy*23,vx:dx*430,vy:dy*430,r:9,life:1.3});
+function spawnPickup(type){pickups.push({type,x:55+Math.random()*Math.max(1,W-110),y:75+Math.random()*Math.max(1,H-145),r:type==="ring"?16:13,t:0})}
+function jump(){if(over||jumpT>0)return;jumpT=.52;sJump()}
+function fire(){
+ if(over)return;magicT=.25;sFire();
+ let a=Math.atan2(lastDir.y,lastDir.x),spread=.16;
+ for(let i=0;i<fireLevel;i++){
+  let off=(i-(fireLevel-1)/2)*spread,ang=a+off,dx=Math.cos(ang),dy=Math.sin(ang);
+  shots.push({x:p.x+dx*24,y:p.y+dy*24,vx:dx*480,vy:dy*480,r:8,life:1.45});
+ }
 }
-function jump(){if(!gameOver && jumpT<=0)jumpT=.52}
-function end(){
- gameOver=true;let hi=Math.max(+localStorage.getItem('forestHigh')||0,score);
- localStorage.setItem('forestHigh',hi);last.textContent=`今回のスコア：${score}`;high.textContent=`ハイスコア：${hi}`;
- result.style.display='grid';
+function finish(){
+ if(over)return;over=true;let old=+localStorage.getItem("mansionHighScoreV3")||0,hi=Math.max(old,score);
+ localStorage.setItem("mansionHighScoreV3",hi);lastScore.textContent=`直近のスコア：${score}`;highScore.textContent=`ハイスコア：${hi}`;result.style.display="grid";hud();
 }
 restart.onclick=reset;
 
-addEventListener('keydown',e=>{
- if(e.code==='KeyW')key.up=1;if(e.code==='KeyS')key.down=1;if(e.code==='KeyA')key.left=1;if(e.code==='KeyD')key.right=1;
- if(e.code==='Space'){e.preventDefault();jump()}
-});
-addEventListener('keyup',e=>{if(e.code==='KeyW')key.up=0;if(e.code==='KeyS')key.down=0;if(e.code==='KeyA')key.left=0;if(e.code==='KeyD')key.right=0});
-c.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0)attack(e.clientX,e.clientY)});
-document.querySelectorAll('[data-key]').forEach(b=>{
- const k=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();key[k]=1;b.setPointerCapture(e.pointerId)});
- b.addEventListener('pointerup',()=>key[k]=0);b.addEventListener('pointercancel',()=>key[k]=0);
-});
-fire.addEventListener('pointerdown',e=>{e.preventDefault();attack(player.x+facing.x*100,player.y+facing.y*100)});
-jump.addEventListener('pointerdown',e=>{e.preventDefault();jump()});
+function setKey(code,v){
+ if(code==="KeyW"||code==="ArrowUp")keys.up=v;if(code==="KeyS"||code==="ArrowDown")keys.down=v;
+ if(code==="KeyA"||code==="ArrowLeft")keys.left=v;if(code==="KeyD"||code==="ArrowRight")keys.right=v;
+}
+addEventListener("keydown",e=>{if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code))e.preventDefault();setKey(e.code,1);if(e.code==="Space"&&!e.repeat)jump()});
+addEventListener("keyup",e=>setKey(e.code,0));
+C.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button===0)fire()});
+document.querySelectorAll("[data-dir]").forEach(b=>{let d=b.dataset.dir;b.onpointerdown=e=>{e.preventDefault();keys[d]=1;b.setPointerCapture(e.pointerId)};b.onpointerup=()=>keys[d]=0;b.onpointercancel=()=>keys[d]=0});
+fireBtn.onpointerdown=e=>{e.preventDefault();fire()};jumpBtn.onpointerdown=e=>{e.preventDefault();jump()};
 
-function circleHit(a,b){return Math.hypot(a.x-b.x,a.y-b.y)<a.r+b.r}
+const collide=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y)<a.r+b.r;
+function burst(x,y,color,n=9){for(let i=0;i<n;i++){let a=Math.random()*6.283,s=35+Math.random()*100;fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.3+Math.random()*.35,color})}}
 function update(dt,t){
- if(gameOver)return;
- let dx=key.right-key.left,dy=key.down-key.up,l=Math.hypot(dx,dy);
- if(l){dx/=l;dy/=l;facing={x:dx,y:dy};player.x+=dx*190*dt;player.y+=dy*190*dt}
- player.x=Math.max(22,Math.min(W-22,player.x));player.y=Math.max(38,Math.min(H-22,player.y));
- if(jumpT>0)jumpT=Math.max(0,jumpT-dt);
- if(t-lastSpawn>Math.max(.55,1.45-score*.002)){spawn();lastSpawn=t}
- shots.forEach(s=>{s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt});shots=shots.filter(s=>s.life>0);
- for(let e of enemies){let ax=player.x-e.x,ay=player.y-e.y,al=Math.hypot(ax,ay)||1;e.x+=ax/al*e.s*dt;e.y+=ay/al*e.s*dt}
+ if(over)return;elapsed+=dt;if(elapsed>=LIMIT){finish();return}
+ let dx=keys.right-keys.left,dy=keys.down-keys.up,l=Math.hypot(dx,dy);
+ if(l){dx/=l;dy/=l;lastDir={x:dx,y:dy};p.x+=dx*190*dt;p.y+=dy*190*dt}
+ p.x=Math.max(24,Math.min(W-24,p.x));p.y=Math.max(45,Math.min(H-24,p.y));
+ jumpT=Math.max(0,jumpT-dt);magicT=Math.max(0,magicT-dt);
+ // 敵の出現ペース：開始時は少なく、3分ごとに段階的に増加
+ const stage=Math.min(10,Math.floor(elapsed/180)); // 0,1,2...（3分ごと）
+ const spawnInterval=Math.max(.42,2.8-stage*.22);
+ const maxEnemies=Math.min(36,4+stage*3);
+ if(t-spawnClock>spawnInterval && enemies.length<maxEnemies){edgeSpawn();spawnClock=t}
+ if(elapsed-coinClock>=60){spawnPickup("coin");coinClock+=60}
+ if(elapsed>=180&&!ringSpawned&&fireLevel<5){spawnPickup("ring");ringSpawned=true}
+ shots.forEach(s=>{s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt});shots=shots.filter(s=>s.life>0&&s.x>-40&&s.x<W+40&&s.y>-40&&s.y<H+40);
+ enemies.forEach(e=>{let ax=p.x-e.x,ay=p.y-e.y,ll=Math.hypot(ax,ay)||1;e.x+=ax/ll*e.s*dt;e.y+=ay/ll*e.s*dt});
  for(let i=enemies.length-1;i>=0;i--){
-  let e=enemies[i],dead=false;
-  for(let j=shots.length-1;j>=0;j--)if(circleHit(e,shots[j])){shots.splice(j,1);enemies.splice(i,1);score+=10;dead=true;updateHud();break}
-  if(!dead && jumpT<=0 && circleHit(e,player) && t-lastHit>.7){hp=Math.max(0,hp-5);lastHit=t;updateHud();if(hp<=0)end()}
+  let e=enemies[i],gone=false;
+  for(let j=shots.length-1;j>=0;j--)if(collide(e,shots[j])){
+   shots.splice(j,1);e.hp--;burst(e.x,e.y,e.boss?"#ffd45c":"#ba7cff",7);
+   if(e.hp<=0){score+=e.boss?20:10;enemies.splice(i,1);gone=true}break;
+  }
+  if(!gone&&jumpT<=0&&collide(e,p)&&t-hitClock>.65){hp=Math.max(0,hp-5);hitClock=t;burst(p.x,p.y,"#ff5368",10);sHurt();if(hp<=0){hud();finish();return}}
  }
+ for(let i=pickups.length-1;i>=0;i++){let q=pickups[i];q.t+=dt;if(collide(p,q)){
+   if(q.type==="coin"){hp=Math.min(100,hp+10);sCoin()}else{fireLevel=Math.min(5,fireLevel*2);if(fireLevel>5)fireLevel=5;sRing()}
+   burst(q.x,q.y,q.type==="coin"?"#ffd84c":"#77d8ff",14);pickups.splice(i,1);
+ }}
+ fx.forEach(f=>{f.x+=f.vx*dt;f.y+=f.vy*dt;f.life-=dt});fx=fx.filter(f=>f.life>0);hud();
 }
-function drawField(){
- x.fillStyle='#6fa956';x.fillRect(0,0,W,H);
- // simple flat checker/grass texture
- x.fillStyle='#649d4e';for(let yy=0;yy<H;yy+=64)for(let xx=0;xx<W;xx+=64)if(((xx+yy)/64)%2===0)x.fillRect(xx,yy,64,64);
- x.fillStyle='#7db360';for(let i=0;i<35;i++){let xx=(i*137)%W,yy=(i*83)%H;x.fillRect(xx,yy,3,9);x.fillRect(xx-3,yy+4,3,3)}
+function mansion(){
+ if(IMG.mansion&&IMG.mansion.complete&&IMG.mansion.naturalWidth){
+   G.drawImage(IMG.mansion,0,0,W,H);return;
+ }
+ G.fillStyle="#241b24";G.fillRect(0,0,W,H);
+ let tile=48;for(let y=0;y<H;y+=tile)for(let x=0;x<W;x+=tile){G.fillStyle=((x/tile+y/tile)&1)?"#40363a":"#514344";G.fillRect(x,y,tile,tile)}
+ G.fillStyle="#651823";G.fillRect(W*.44,0,W*.12,H);G.fillRect(0,H*.44,W,H*.14);
 }
-function drawPlayer(){
- let lift=jumpT>0?Math.sin((jumpT/.52)*Math.PI)*24:0,px=player.x,py=player.y-lift;
- x.save();x.translate(Math.round(px),Math.round(py));
- // shadow
- x.fillStyle='#29462c88';x.beginPath();x.ellipse(0,20+lift,18,7,0,0,7);x.fill();
- // legs/boots
- x.fillStyle='#241c2d';x.fillRect(-12,10,8,16);x.fillRect(4,10,8,16);
- // coat
- x.fillStyle='#7d2635';x.fillRect(-15,-8,30,23);x.fillStyle='#2a2130';x.fillRect(-11,-4,22,18);
- // white hair
- x.fillStyle='#e8e4ee';x.fillRect(-15,-30,30,24);x.fillRect(-19,-22,7,25);x.fillRect(12,-22,7,25);
- // face
- x.fillStyle='#f3c6b5';x.fillRect(-10,-21,20,14);x.fillStyle='#342437';x.fillRect(-6,-17,3,3);x.fillRect(4,-17,3,3);
- // bow
- x.fillStyle='#181522';x.fillRect(-17,-34,8,7);x.fillRect(9,-34,8,7);x.fillRect(-5,-32,10,5);
- // casting hand
- x.fillStyle='#f3c6b5';x.fillRect(facing.x>=0?14:-19,-3,5,5);
- x.restore();
+function magic(){
+ if(!magicT)return;
+ if(IMG.magicCircle&&IMG.magicCircle.complete&&IMG.magicCircle.naturalWidth){
+   G.save();G.globalAlpha=Math.min(1,magicT/.18);G.drawImage(IMG.magicCircle,p.x-42,p.y+5,84,42);G.restore();return;
+ }
+ G.save();G.translate(p.x,p.y+17);G.globalAlpha=magicT/.25;G.strokeStyle="#76d7ff";G.beginPath();G.ellipse(0,0,31,13,0,0,7);G.stroke();G.restore();
 }
-function drawEnemy(e){
- x.save();x.translate(e.x,e.y);x.fillStyle='#fff';x.beginPath();x.arc(0,0,e.r,0,7);x.fill();
- x.strokeStyle='#d9dfe8';x.lineWidth=2;x.stroke();x.fillStyle='#26303a';x.fillRect(-7,-4,3,4);x.fillRect(4,-4,3,4);
- x.fillRect(-4,5,8,2);x.restore();
+function player(){
+ let lift=jumpT?Math.sin((1-jumpT/.52)*Math.PI)*25:0;
+ let img=IMG.playerIdle;
+ if(jumpT>0) img=IMG.playerJump;
+ else if(magicT>0) img=IMG.playerCast;
+ else if(performance.now()/1000-hitClock<.22) img=IMG.playerDamage;
+ else if(keys.up||keys.down||keys.left||keys.right){
+   if(Math.abs(lastDir.x)>Math.abs(lastDir.y)) img=lastDir.x<0?IMG.playerLeft:IMG.playerRight;
+   else img=lastDir.y<0?IMG.playerUp:IMG.playerDown;
+ }
+ if(img&&img.complete&&img.naturalWidth){
+   G.fillStyle="#0007";G.beginPath();G.ellipse(p.x,p.y+20,18,6,0,0,7);G.fill();
+   G.drawImage(img,p.x-31,p.y-48-lift,62,72);return;
+ }
+ G.fillStyle="#ddd";G.fillRect(p.x-12,p.y-20-lift,24,40);
 }
-function drawShot(s){
- x.fillStyle='#ffcf49';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();x.fillStyle='#ff6b2c';x.beginPath();x.arc(s.x-3,s.y+2,s.r*.55,0,7);x.fill()
+function enemy(e){
+ let im=e.boss?IMG.enemyCrown:IMG.enemy;
+ if(im&&im.complete&&im.naturalWidth){G.drawImage(im,e.x-27,e.y-27,54,54);return}
+ G.fillStyle="#7b3fb2";G.beginPath();G.arc(e.x,e.y,e.r,0,7);G.fill();
 }
-function render(){drawField();enemies.forEach(drawEnemy);shots.forEach(drawShot);drawPlayer()}
-let prev=performance.now();
-function loop(now){let dt=Math.min(.033,(now-prev)/1000);prev=now;update(dt,now/1000);render();requestAnimationFrame(loop)}
+function shot(s){
+ if(IMG.fireball&&IMG.fireball.complete&&IMG.fireball.naturalWidth){
+   let a=Math.atan2(s.vy,s.vx);G.save();G.translate(s.x,s.y);G.rotate(a);G.drawImage(IMG.fireball,-22,-12,44,24);G.restore();return;
+ }
+ G.fillStyle="#ff6b22";G.beginPath();G.arc(s.x,s.y,s.r+3,0,7);G.fill();
+}
+function pickup(q){
+ let im=q.type==="coin"?IMG.coin:IMG.ring;
+ if(im&&im.complete&&im.naturalWidth){G.drawImage(im,q.x-18,q.y-18,36,36);return}
+ G.fillStyle="#ffd646";G.beginPath();G.arc(q.x,q.y,q.r,0,7);G.fill();
+}
+function render(){mansion();magic();pickups.forEach(pickup);enemies.forEach(enemy);shots.forEach(shot);fx.forEach(f=>{G.globalAlpha=Math.min(1,f.life/.3);G.fillStyle=f.color;G.fillRect(f.x,f.y,4,4);G.globalAlpha=1});player()}
+let prev=performance.now();function loop(ms){let dt=Math.min(.033,(ms-prev)/1000);prev=ms;update(dt,ms/1000);render();requestAnimationFrame(loop)}
 reset();requestAnimationFrame(loop);
 </script>
 </body></html>
