@@ -9,8 +9,8 @@
 :root{--sat:env(safe-area-inset-top,0px);--sar:env(safe-area-inset-right,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08070b;touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:ui-monospace,Menlo,Consolas,monospace}
-#wrap{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;background:#08070b}
-canvas{position:absolute;inset:0;display:block;image-rendering:pixelated}
+#wrap{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;background:#08070b;touch-action:none!important;-webkit-touch-callout:none!important;-webkit-user-select:none!important;user-select:none!important}
+canvas{position:absolute;inset:0;display:block;image-rendering:pixelated;touch-action:none!important;-webkit-touch-callout:none!important;-webkit-user-select:none!important;user-select:none!important}
 #hud{position:absolute;z-index:5;top:calc(8px + var(--sat));left:calc(10px + var(--sal));color:#fff;font-weight:900;text-shadow:2px 2px #000;pointer-events:none;font-size:clamp(12px,2.5vw,18px)}
 #title{font-size:1.08em;margin-bottom:5px}.row{margin:2px 0;white-space:nowrap}
 #bar{display:inline-block;width:min(250px,42vw);height:14px;border:2px solid #eee;background:#28171d;vertical-align:-2px}
@@ -77,11 +77,38 @@ document.addEventListener("gesturestart", e => e.preventDefault(), {passive:fals
 document.addEventListener("gesturechange", e => e.preventDefault(), {passive:false});
 document.addEventListener("gestureend", e => e.preventDefault(), {passive:false});
 
+// V10: iOS Safari のページジェスチャーをゲーム領域では発生させない
+const zoomGuardArea=document.getElementById("wrap");
+
+["touchstart","touchmove","touchend","touchcancel"].forEach(type=>{
+  zoomGuardArea.addEventListener(type,e=>{
+    if(e.cancelable)e.preventDefault();
+  },{passive:false});
+});
+
+zoomGuardArea.addEventListener("dblclick",e=>{
+  if(e.cancelable)e.preventDefault();
+},{passive:false});
+
+["contextmenu","selectstart","dragstart"].forEach(type=>{
+  zoomGuardArea.addEventListener(type,e=>{
+    if(e.cancelable)e.preventDefault();
+  },{passive:false});
+});
+
+["gesturestart","gesturechange","gestureend"].forEach(type=>{
+  zoomGuardArea.addEventListener(type,e=>{
+    if(e.cancelable)e.preventDefault();
+  },{passive:false});
+});
+
+
 const C=document.getElementById("game"),G=C.getContext("2d"),E=id=>document.getElementById(id);
 const hpFill=E("hpFill"),hpText=E("hpText"),scoreText=E("scoreText"),hiText=E("hiText"),timeText=E("timeText"),buff=E("buff");
 const result=E("result"),lastScore=E("lastScore"),highScore=E("highScore"),restart=E("restart");
 let W=1,H=1,DPR=1;
 let WORLD_W=1280,WORLD_H=600,SCALE=1,OFF_X=0,OFF_Y=0;
+let CAM_X=0,CAM_Y=0;
 
 function resize(){
  const vv=window.visualViewport;
@@ -103,8 +130,7 @@ function resize(){
  OFF_X=(W-WORLD_W*SCALE)/2;
  OFF_Y=(H-WORLD_H*SCALE)/2;
  if(typeof p !== "undefined" && p){
-   p.x=Math.min(WORLD_W-25,Math.max(25,p.x));
-   p.y=Math.min(WORLD_H-25,Math.max(55,p.y));
+   // V11: プレイヤーは有限マップの端で止めない。カメラが追従する。
  }
 }
 let resizeTimer=0;
@@ -162,7 +188,7 @@ const sCoin=()=>sound(650,.15,"sine",.035,950);
 const sRing=()=>{sound(440,.14,"sine",.03,660);setTimeout(()=>sound(660,.16,"sine",.03,990),90)};
 
 function reset(){
- p={x:WORLD_W/2,y:WORLD_H/2,r:14};enemies=[];shots=[];pickups=[];particles=[];
+ p={x:WORLD_W/2,y:WORLD_H/2,r:14};CAM_X=0;CAM_Y=0;enemies=[];shots=[];pickups=[];particles=[];
  hp=100;score=0;elapsed=0;nextCoinTime=60;ringSpawned=false;fireLevel=1;
  jumpT=0;magicT=0;damageT=0;lastDir={x:1,y:0};over=false;spawnAcc=0;
  result.style.display="none";hud();
@@ -230,12 +256,12 @@ function fire(){
 function edgeSpawn(){
  const side=Math.floor(Math.random()*4),boss=Math.random()<.18,m=40;
  const e={x:0,y:0,r:boss?17:15,s:(boss?42:50)+Math.random()*24,hp:boss?2:1,boss,age:Math.random()};
- if(side===0){e.x=Math.random()*WORLD_W;e.y=-m}else if(side===1){e.x=WORLD_W+m;e.y=Math.random()*WORLD_H}
- else if(side===2){e.x=Math.random()*WORLD_W;e.y=WORLD_H+m}else{e.x=-m;e.y=Math.random()*WORLD_H}
+ if(side===0){e.x=CAM_X+Math.random()*WORLD_W;e.y=CAM_Y-m}else if(side===1){e.x=CAM_X+WORLD_W+m;e.y=CAM_Y+Math.random()*WORLD_H}
+ else if(side===2){e.x=CAM_X+Math.random()*WORLD_W;e.y=CAM_Y+WORLD_H+m}else{e.x=CAM_X-m;e.y=CAM_Y+Math.random()*WORLD_H}
  enemies.push(e);
 }
 function spawnPickup(type){
- pickups.push({type,x:60+Math.random()*Math.max(1,WORLD_W-120),y:70+Math.random()*Math.max(1,WORLD_H-130),r:15,age:0});
+ pickups.push({type,x:CAM_X+60+Math.random()*Math.max(1,WORLD_W-120),y:CAM_Y+70+Math.random()*Math.max(1,WORLD_H-130),r:15,age:0});
 }
 const hit=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y)<a.r+b.r;
 function fx(type,x,y){particles.push({type,x,y,age:0,life:type==="death"?.65:.42})}
@@ -247,7 +273,20 @@ function update(dt){
 
  let dx=analog.active?analog.x:keys.right-keys.left,dy=analog.active?analog.y:keys.down-keys.up,l=Math.hypot(dx,dy);
  if(l){dx/=l;dy/=l;lastDir={x:dx,y:dy};p.x+=dx*190*dt;p.y+=dy*190*dt}
- p.x=Math.max(24,Math.min(WORLD_W-24,p.x));p.y=Math.max(45,Math.min(WORLD_H-24,p.y));
+ // V11: 座標は無限フィールド上を自由に移動できる。
+
+ // カメラ追従。中央に固定せず、画面端寄りの安全枠を越えた時だけ背景が動く。
+ const marginX=WORLD_W*.22;
+ const marginY=WORLD_H*.20;
+ const leftEdge=CAM_X+marginX;
+ const rightEdge=CAM_X+WORLD_W-marginX;
+ const topEdge=CAM_Y+marginY;
+ const bottomEdge=CAM_Y+WORLD_H-marginY;
+
+ if(p.x<leftEdge) CAM_X=p.x-marginX;
+ if(p.x>rightEdge) CAM_X=p.x-(WORLD_W-marginX);
+ if(p.y<topEdge) CAM_Y=p.y-marginY;
+ if(p.y>bottomEdge) CAM_Y=p.y-(WORLD_H-marginY);
  jumpT=Math.max(0,jumpT-dt);magicT=Math.max(0,magicT-dt);damageT=Math.max(0,damageT-dt);
 
  // 3分ごとに敵の上限と出現速度を段階的に増加
@@ -264,7 +303,7 @@ function update(dt){
  if(elapsed>=180&&!ringSpawned&&fireLevel<5){spawnPickup("ring");ringSpawned=true}
 
  for(const s of shots){s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;s.age+=dt}
- shots=shots.filter(s=>s.life>0&&s.x>-50&&s.x<WORLD_W+50&&s.y>-50&&s.y<WORLD_H+50);
+ shots=shots.filter(s=>s.life>0);
 
  for(const e of enemies){
   e.age+=dt;const ax=p.x-e.x,ay=p.y-e.y,ll=Math.hypot(ax,ay)||1;
@@ -306,8 +345,17 @@ function drawFallbackMansion(){
 function drawBackground(){
  const im=IMG.mansion;
  if(im&&im.complete&&im.naturalWidth){
-  const sc=Math.max(WORLD_W/im.naturalWidth,WORLD_H/im.naturalHeight),dw=im.naturalWidth*sc,dh=im.naturalHeight*sc;
-  G.drawImage(im,(WORLD_W-dw)/2,(WORLD_H-dh)/2,dw,dh);
+  // V11: 洋館画像をタイルとして周囲へ繰り返し描画。
+  // カメラが移動しても常に次の館が続くため、広いマップに見える。
+  const tw=WORLD_W, th=WORLD_H;
+  const left=CAM_X-WORLD_W*.6, top=CAM_Y-WORLD_H*.6;
+  const right=CAM_X+WORLD_W*1.6, bottom=CAM_Y+WORLD_H*1.6;
+  const sx=Math.floor(left/tw)*tw, sy=Math.floor(top/th)*th;
+  for(let y=sy;y<bottom;y+=th){
+    for(let x=sx;x<right;x+=tw){
+      G.drawImage(im,x,y,tw,th);
+    }
+  }
  }else drawFallbackMansion();
 }
 function imgFrame(arr,index,x,y,w,h,rot=0){
@@ -360,6 +408,7 @@ function render(){
  G.save();
  G.translate(OFF_X,OFF_Y);
  G.scale(SCALE,SCALE);
+ G.translate(-CAM_X,-CAM_Y);
  drawBackground();drawMagic();
  pickups.forEach(drawPickup);enemies.forEach(drawEnemy);shots.forEach(drawShot);particles.forEach(drawFx);drawPlayer();
  G.restore();
