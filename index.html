@@ -26,8 +26,7 @@ canvas{position:absolute;inset:0;display:block;image-rendering:pixelated}
 #jump{left:0;bottom:0;width:82px;background:#245696e6;font-size:13px}
 #result{display:none;position:absolute;z-index:30;inset:0;background:#07050be9;color:#fff;place-items:center;text-align:center;padding:20px}
 .card{width:min(360px,90vw);padding:28px;border:2px solid #bd9452;border-radius:15px;background:#18121d}.card h1{color:#ffd56a}.card p{font-size:18px}.card button{padding:12px 25px;border:0;border-radius:9px;font-weight:900;font-size:16px}
-#rotate{display:none;position:absolute;z-index:40;inset:0;background:#08070bf2;color:white;place-items:center;text-align:center;padding:30px;font-weight:800}
-@media (orientation:portrait) and (max-width:700px){#rotate{display:grid}}
+
 </style>
 </head>
 <body>
@@ -47,7 +46,7 @@ canvas{position:absolute;inset:0;display:block;image-rendering:pixelated}
  <div class="actions"><div class="btn" id="fire">🔥</div><div class="btn" id="jump">JUMP</div></div>
 </div>
 <div id="result"><div class="card"><h1>RESULT</h1><p id="lastScore"></p><p id="highScore"></p><button id="restart">もう一度</button></div></div>
-<div id="rotate">iPhoneは横向きにすると<br>画面いっぱいで遊べます</div>
+
 </div>
 <script>
 "use strict";
@@ -305,7 +304,12 @@ function drawEnemy(e){
 function drawShot(s){imgFrame(IMG.fire,Math.floor(s.age*18)%6,s.x,s.y,48,32,Math.atan2(s.vy,s.vx))}
 function drawPickup(q){
  const arr=q.type==="coin"?IMG.coin:IMG.ring;
- imgFrame(arr,Math.floor(q.age*7)%4,q.x,q.y,40,40);
+ const im=arr?.[Math.floor(q.age*7)%4];
+ if(!im||!im.complete||!im.naturalWidth)return;
+ const maxSize=q.type==="coin"?42:46;
+ const scale=Math.min(maxSize/im.naturalWidth,maxSize/im.naturalHeight);
+ const dw=im.naturalWidth*scale, dh=im.naturalHeight*scale;
+ G.drawImage(im,q.x-dw/2,q.y-dh/2,dw,dh);
 }
 function drawFx(f){
  const arr=IMG[f.type];if(!arr)return;
