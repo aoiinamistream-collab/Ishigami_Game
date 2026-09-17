@@ -1,0 +1,2534 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>魔法使いの館 Survival</title>
+
+<style>
+:root{
+  --sat:env(safe-area-inset-top,0px);
+  --sar:env(safe-area-inset-right,0px);
+  --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px)
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent
+}
+
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#08070b;
+  touch-action:none;
+  overscroll-behavior:none;
+  -webkit-text-size-adjust:100%;
+  font-family:ui-monospace,Menlo,Consolas,monospace
+}
+
+#wrap{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#08070b
+}
+
+canvas{
+  position:absolute;
+  inset:0;
+  display:block;
+  image-rendering:pixelated
+}
+
+#hud{
+  position:absolute;
+  z-index:5;
+  top:calc(8px + var(--sat));
+  left:calc(10px + var(--sal));
+  color:#fff;
+  font-weight:900;
+  text-shadow:2px 2px #000;
+  pointer-events:none;
+  font-size:clamp(12px,2.5vw,18px)
+}
+
+#title{
+  font-size:1.08em;
+  margin-bottom:5px
+}
+
+.row{
+  margin:2px 0;
+  white-space:nowrap
+}
+
+#bar{
+  display:inline-block;
+  width:min(250px,42vw);
+  height:14px;
+  border:2px solid #eee;
+  background:#28171d;
+  vertical-align:-2px
+}
+
+#hpFill{
+  display:block;
+  height:100%;
+  width:100%;
+  background:#d72842
+}
+
+#buff{color:#ffd55b}
+
+#touch{
+  position:absolute;
+  inset:0;
+  z-index:12;
+  pointer-events:none;
+  display:none
+}
+
+@media(pointer:coarse),(max-width:900px){
+  #touch{display:block}
+}
+
+.pad{
+  position:absolute;
+  left:calc(14px + var(--sal));
+  bottom:calc(16px + var(--sab));
+  width:150px;
+  height:150px;
+  pointer-events:auto
+}
+
+.btn{
+  position:absolute;
+  width:50px;
+  height:50px;
+  border:2px solid #ffffffa8;
+  border-radius:13px;
+  background:#111522c9;
+  color:#fff;
+  display:grid;
+  place-items:center;
+  font-size:22px;
+  font-weight:900;
+  user-select:none;
+  -webkit-user-select:none
+}
+
+.up{left:50px}
+.left{left:0;top:50px}
+.down{left:50px;top:100px}
+.right{left:100px;top:50px}
+
+.actions{
+  position:absolute;
+  right:calc(14px + var(--sar));
+  bottom:calc(18px + var(--sab));
+  width:178px;
+  height:122px;
+  pointer-events:auto
+}
+
+#fire{
+  right:0;
+  top:0;
+  width:76px;
+  height:76px;
+  border-radius:50%;
+  background:#87291ee6;
+  font-size:30px
+}
+
+#jump{
+  left:0;
+  bottom:0;
+  width:82px;
+  background:#245696e6;
+  font-size:13px
+}
+
+#result{
+  display:none;
+  position:absolute;
+  z-index:30;
+  inset:0;
+  background:#07050be9;
+  color:#fff;
+  place-items:center;
+  text-align:center;
+  padding:20px
+}
+
+.card{
+  width:min(360px,90vw);
+  padding:28px;
+  border:2px solid #bd9452;
+  border-radius:15px;
+  background:#18121d
+}
+
+.card h1{color:#ffd56a}
+.card p{font-size:18px}
+
+.card button{
+  padding:12px 25px;
+  border:0;
+  border-radius:9px;
+  font-weight:900;
+  font-size:16px
+}
+</style>
+</head>
+
+<body>
+
+<div id="wrap">
+
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="title">♜ 魔法使いの館 Survival</div>
+
+  <div class="row">
+    HP
+    <span id="bar">
+      <span id="hpFill"></span>
+    </span>
+    <span id="hpText">100 / 100</span>
+  </div>
+
+  <div class="row">
+    SCORE <span id="scoreText">0</span>
+    　
+    HI-SCORE <span id="hiText">0</span>
+  </div>
+
+  <div class="row">
+    TIME <span id="timeText">60:00</span>
+    　
+    <span id="buff">🔥 ×1</span>
+  </div>
+</div>
+
+<div id="touch">
+
+  <div class="pad">
+    <div class="btn up" data-dir="up">▲</div>
+    <div class="btn left" data-dir="left">◀</div>
+    <div class="btn down" data-dir="down">▼</div>
+    <div class="btn right" data-dir="right">▶</div>
+  </div>
+
+  <div class="actions">
+    <div class="btn" id="fire">🔥</div>
+    <div class="btn" id="jump">JUMP</div>
+  </div>
+
+</div>
+
+<div id="result">
+  <div class="card">
+    <h1>RESULT</h1>
+    <p id="lastScore"></p>
+    <p id="highScore"></p>
+    <button id="restart">もう一度</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+"use strict";
+
+
+// ========================================================
+// iPhone：ページ自体の拡大を防止
+// ========================================================
+
+document.addEventListener("touchstart", e => {
+  if(e.touches && e.touches.length > 1){
+    e.preventDefault();
+  }
+},{passive:false});
+
+document.addEventListener("touchmove", e => {
+  if(e.touches && e.touches.length > 1){
+    e.preventDefault();
+  }
+},{passive:false});
+
+let lastTapGuard=0;
+
+document.addEventListener("touchend", e => {
+
+  const n=Date.now();
+
+  if(n-lastTapGuard<400){
+    e.preventDefault();
+  }
+
+  lastTapGuard=n;
+
+},{passive:false});
+
+
+let lastTouchEnd=0;
+
+document.addEventListener("touchend",e=>{
+
+  const now=Date.now();
+
+  if(now-lastTouchEnd<=350){
+    e.preventDefault();
+  }
+
+  lastTouchEnd=now;
+
+},{passive:false});
+
+
+document.addEventListener(
+  "gesturestart",
+  e=>e.preventDefault(),
+  {passive:false}
+);
+
+document.addEventListener(
+  "gesturechange",
+  e=>e.preventDefault(),
+  {passive:false}
+);
+
+document.addEventListener(
+  "gestureend",
+  e=>e.preventDefault(),
+  {passive:false}
+);
+
+
+// ========================================================
+// Canvas
+// ========================================================
+
+const C=document.getElementById("game");
+const G=C.getContext("2d");
+
+const E=id=>document.getElementById(id);
+
+const hpFill=E("hpFill");
+const hpText=E("hpText");
+const scoreText=E("scoreText");
+const hiText=E("hiText");
+const timeText=E("timeText");
+const buff=E("buff");
+
+const result=E("result");
+const lastScore=E("lastScore");
+const highScore=E("highScore");
+const restart=E("restart");
+
+
+let W=1;
+let H=1;
+let DPR=1;
+
+
+// ========================================================
+// ゲーム世界
+//
+// iPhoneの画面サイズそのものをゲーム世界にしない。
+// 最低1280×600のフィールドを端末へ縮小表示。
+// ========================================================
+
+let WORLD_W=1280;
+let WORLD_H=600;
+
+let SCALE=1;
+let OFF_X=0;
+let OFF_Y=0;
+
+
+// ========================================================
+// 画面サイズ
+// ========================================================
+
+function resize(){
+
+  const vv=window.visualViewport;
+
+  W=Math.max(
+    1,
+    Math.round(vv ? vv.width : innerWidth)
+  );
+
+  H=Math.max(
+    1,
+    Math.round(vv ? vv.height : innerHeight)
+  );
+
+  DPR=Math.min(
+    devicePixelRatio || 1,
+    2
+  );
+
+
+  const wrap=document.getElementById("wrap");
+
+  wrap.style.left="0px";
+  wrap.style.top="0px";
+  wrap.style.width="100%";
+  wrap.style.height="100%";
+
+
+  C.style.width="100%";
+  C.style.height="100%";
+
+  C.width=Math.round(W*DPR);
+  C.height=Math.round(H*DPR);
+
+
+  G.setTransform(
+    DPR,0,
+    0,DPR,
+    0,0
+  );
+
+
+  const aspect=W/Math.max(1,H);
+
+  WORLD_H=600;
+
+  WORLD_W=Math.max(
+    1280,
+    Math.round(WORLD_H*aspect)
+  );
+
+
+  SCALE=Math.min(
+    W/WORLD_W,
+    H/WORLD_H
+  );
+
+
+  OFF_X=(W-WORLD_W*SCALE)/2;
+  OFF_Y=(H-WORLD_H*SCALE)/2;
+
+
+  if(typeof p!=="undefined" && p){
+
+    p.x=Math.min(
+      WORLD_W-25,
+      Math.max(25,p.x)
+    );
+
+    p.y=Math.min(
+      WORLD_H-25,
+      Math.max(55,p.y)
+    );
+
+  }
+
+}
+
+
+let resizeTimer=0;
+
+
+function scheduleResize(){
+
+  clearTimeout(resizeTimer);
+
+  resize();
+
+  resizeTimer=setTimeout(resize,80);
+
+  setTimeout(resize,180);
+  setTimeout(resize,350);
+  setTimeout(resize,650);
+
+}
+
+
+addEventListener(
+  "resize",
+  scheduleResize,
+  {passive:true}
+);
+
+addEventListener(
+  "orientationchange",
+  scheduleResize,
+  {passive:true}
+);
+
+visualViewport?.addEventListener(
+  "resize",
+  scheduleResize,
+  {passive:true}
+);
+
+visualViewport?.addEventListener(
+  "scroll",
+  scheduleResize,
+  {passive:true}
+);
+
+screen.orientation?.addEventListener?.(
+  "change",
+  scheduleResize
+);
+
+
+// ========================================================
+// 画像読み込み
+// ========================================================
+
+const AS="assets/";
+
+const IMG={};
+
+
+function load(name,path){
+
+  const i=new Image();
+
+  i.decoding="async";
+  i.src=AS+path;
+
+  IMG[name]=i;
+
+  return i;
+
+}
+
+
+function seq(prefix,path,count){
+
+  IMG[prefix]=Array.from(
+    {length:count},
+    (_,i)=>load(
+      prefix+(i+1),
+      path+(i+1)+".png"
+    )
+  );
+
+}
+
+
+// 主人公
+seq(
+  "idle",
+  "player/player_idle_",
+  4
+);
+
+seq(
+  "down",
+  "player/player_walk_down_",
+  4
+);
+
+seq(
+  "up",
+  "player/player_walk_up_",
+  4
+);
+
+seq(
+  "left",
+  "player/player_walk_left_",
+  4
+);
+
+seq(
+  "right",
+  "player/player_walk_right_",
+  4
+);
+
+seq(
+  "jump",
+  "player/player_jump_",
+  4
+);
+
+seq(
+  "cast",
+  "player/player_cast_",
+  6
+);
+
+seq(
+  "damage",
+  "player/player_damage_",
+  4
+);
+
+
+// 敵
+seq(
+  "demon",
+  "enemies/demon_",
+  4
+);
+
+seq(
+  "crown",
+  "enemies/demon_crown_",
+  4
+);
+
+
+// エフェクト
+seq(
+  "fire",
+  "effects/fireball_",
+  6
+);
+
+seq(
+  "circle",
+  "effects/magic_circle_",
+  6
+);
+
+seq(
+  "hit",
+  "effects/hit_effect_",
+  6
+);
+
+seq(
+  "death",
+  "effects/death_effect_",
+  8
+);
+
+seq(
+  "heal",
+  "effects/heal_effect_",
+  6
+);
+
+
+// アイテム
+seq(
+  "coin",
+  "items/coin_",
+  4
+);
+
+seq(
+  "ring",
+  "items/ring_",
+  4
+);
+
+
+// 背景
+load(
+  "mansion",
+  "background/mansion_sample_map.png"
+);
+
+
+// ========================================================
+// ゲーム変数
+// ========================================================
+
+const keys={
+  up:0,
+  down:0,
+  left:0,
+  right:0
+};
+
+
+const LIMIT=3600;
+
+
+let p;
+let enemies;
+let shots;
+let pickups;
+let particles;
+
+let hp;
+let score;
+let elapsed;
+
+let nextCoinTime;
+let ringSpawned;
+
+let fireLevel;
+
+let jumpT;
+let magicT;
+let damageT;
+
+let lastDir;
+
+let over;
+let spawnAcc;
+
+let ACtx=null;
+
+
+resize();
+
+
+// ========================================================
+// サウンド
+// ========================================================
+
+function sound(
+  f,
+  d,
+  type="square",
+  vol=.03,
+  end=f
+){
+
+  try{
+
+    if(!ACtx){
+
+      ACtx=new(
+        AudioContext ||
+        webkitAudioContext
+      )();
+
+    }
+
+
+    if(ACtx.state==="suspended"){
+      ACtx.resume();
+    }
+
+
+    const o=ACtx.createOscillator();
+    const g=ACtx.createGain();
+
+    const t=ACtx.currentTime;
+
+
+    o.type=type;
+
+    o.frequency.setValueAtTime(
+      f,
+      t
+    );
+
+    o.frequency.exponentialRampToValueAtTime(
+      Math.max(40,end),
+      t+d
+    );
+
+
+    g.gain.setValueAtTime(
+      vol,
+      t
+    );
+
+    g.gain.exponentialRampToValueAtTime(
+      .001,
+      t+d
+    );
+
+
+    o.connect(g);
+    g.connect(ACtx.destination);
+
+    o.start();
+    o.stop(t+d);
+
+  }catch(e){}
+
+}
+
+
+const sJump=()=>sound(
+  300,
+  .16,
+  "square",
+  .03,
+  600
+);
+
+const sFire=()=>sound(
+  180,
+  .12,
+  "sawtooth",
+  .035,
+  460
+);
+
+const sHurt=()=>sound(
+  120,
+  .20,
+  "sawtooth",
+  .05,
+  55
+);
+
+const sCoin=()=>sound(
+  650,
+  .15,
+  "sine",
+  .035,
+  950
+);
+
+const sRing=()=>{
+
+  sound(
+    440,
+    .14,
+    "sine",
+    .03,
+    660
+  );
+
+  setTimeout(
+    ()=>sound(
+      660,
+      .16,
+      "sine",
+      .03,
+      990
+    ),
+    90
+  );
+
+};
+
+
+// ========================================================
+// リセット
+// ========================================================
+
+function reset(){
+
+  p={
+    x:WORLD_W/2,
+    y:WORLD_H/2,
+    r:14
+  };
+
+
+  enemies=[];
+  shots=[];
+  pickups=[];
+  particles=[];
+
+
+  hp=100;
+  score=0;
+  elapsed=0;
+
+
+  nextCoinTime=60;
+
+  ringSpawned=false;
+
+  fireLevel=1;
+
+
+  jumpT=0;
+  magicT=0;
+  damageT=0;
+
+
+  lastDir={
+    x:1,
+    y:0
+  };
+
+
+  over=false;
+  spawnAcc=0;
+
+
+  result.style.display="none";
+
+
+  hud();
+
+}
+
+
+// ========================================================
+// HUD
+// ========================================================
+
+function hud(){
+
+  hpFill.style.width=
+    Math.max(0,hp)+"%";
+
+
+  hpText.textContent=
+    `${Math.max(0,hp)} / 100`;
+
+
+  scoreText.textContent=score;
+
+
+  const hi=+(
+    localStorage.getItem(
+      "mansionHighScoreV5"
+    ) || 0
+  );
+
+
+  hiText.textContent=hi;
+
+
+  const r=Math.max(
+    0,
+    Math.ceil(LIMIT-elapsed)
+  );
+
+
+  timeText.textContent=
+    `${Math.floor(r/60)}:${String(r%60).padStart(2,"0")}`;
+
+
+  buff.textContent=
+    `🔥 ×${fireLevel}`;
+
+}
+
+
+// ========================================================
+// ゲーム終了
+// ========================================================
+
+function finish(){
+
+  if(over)return;
+
+
+  over=true;
+
+  hp=Math.max(0,hp);
+
+
+  const old=+(
+    localStorage.getItem(
+      "mansionHighScoreV5"
+    ) || 0
+  );
+
+
+  const hi=Math.max(
+    old,
+    score
+  );
+
+
+  localStorage.setItem(
+    "mansionHighScoreV5",
+    hi
+  );
+
+
+  lastScore.textContent=
+    `直近のスコア：${score}`;
+
+
+  highScore.textContent=
+    `ハイスコア：${hi}`;
+
+
+  result.style.display="grid";
+
+
+  hud();
+
+}
+
+
+restart.onclick=reset;
+
+
+// ========================================================
+// PC操作
+// ========================================================
+
+function setKey(code,v){
+
+  if(
+    code==="KeyW" ||
+    code==="ArrowUp"
+  ){
+    keys.up=v;
+  }
+
+
+  if(
+    code==="KeyS" ||
+    code==="ArrowDown"
+  ){
+    keys.down=v;
+  }
+
+
+  if(
+    code==="KeyA" ||
+    code==="ArrowLeft"
+  ){
+    keys.left=v;
+  }
+
+
+  if(
+    code==="KeyD" ||
+    code==="ArrowRight"
+  ){
+    keys.right=v;
+  }
+
+}
+
+
+addEventListener(
+  "keydown",
+  e=>{
+
+    if([
+      "ArrowUp",
+      "ArrowDown",
+      "ArrowLeft",
+      "ArrowRight",
+      "Space"
+    ].includes(e.code)){
+      e.preventDefault();
+    }
+
+
+    setKey(
+      e.code,
+      1
+    );
+
+
+    if(
+      e.code==="Space" &&
+      !e.repeat
+    ){
+      doJump();
+    }
+
+
+    if(
+      e.code==="KeyZ" &&
+      !e.repeat
+    ){
+      fire();
+    }
+
+  },
+  {passive:false}
+);
+
+
+addEventListener(
+  "keyup",
+  e=>setKey(
+    e.code,
+    0
+  )
+);
+
+
+// 左クリック
+C.addEventListener(
+  "pointerdown",
+  e=>{
+
+    if(
+      e.pointerType==="mouse" &&
+      e.button===0
+    ){
+      fire();
+    }
+
+  }
+);
+
+
+// ========================================================
+// iPhone タッチ操作
+// ========================================================
+
+document
+.querySelectorAll("[data-dir]")
+.forEach(b=>{
+
+  const d=b.dataset.dir;
+
+
+  const off=()=>{
+    keys[d]=0;
+  };
+
+
+  b.addEventListener(
+    "pointerdown",
+    e=>{
+
+      e.preventDefault();
+
+      keys[d]=1;
+
+      b.setPointerCapture?.(
+        e.pointerId
+      );
+
+    }
+  );
+
+
+  b.addEventListener(
+    "pointerup",
+    off
+  );
+
+
+  b.addEventListener(
+    "pointercancel",
+    off
+  );
+
+
+  b.addEventListener(
+    "lostpointercapture",
+    off
+  );
+
+});
+
+
+E("fire").addEventListener(
+  "pointerdown",
+  e=>{
+
+    e.preventDefault();
+    fire();
+
+  }
+);
+
+
+E("jump").addEventListener(
+  "pointerdown",
+  e=>{
+
+    e.preventDefault();
+    doJump();
+
+  }
+);
+
+
+// ========================================================
+// ジャンプ
+// ========================================================
+
+function doJump(){
+
+  if(
+    over ||
+    jumpT>0
+  ){
+    return;
+  }
+
+
+  jumpT=.52;
+
+  sJump();
+
+}
+
+
+// ========================================================
+// 炎
+// ========================================================
+
+function fire(){
+
+  if(over)return;
+
+
+  magicT=.28;
+
+
+  sFire();
+
+
+  const base=Math.atan2(
+    lastDir.y,
+    lastDir.x
+  );
+
+
+  const spread=.16;
+
+
+  for(
+    let i=0;
+    i<fireLevel;
+    i++
+  ){
+
+    const a=
+      base+
+      (
+        i-
+        (fireLevel-1)/2
+      )*
+      spread;
+
+
+    const dx=Math.cos(a);
+    const dy=Math.sin(a);
+
+
+    shots.push({
+
+      x:p.x+dx*24,
+      y:p.y+dy*24,
+
+      vx:dx*500,
+      vy:dy*500,
+
+      r:8,
+
+      life:1.35,
+
+      age:0
+
+    });
+
+  }
+
+}
+
+
+// ========================================================
+// 敵生成
+// ========================================================
+
+function edgeSpawn(){
+
+  const side=
+    Math.floor(
+      Math.random()*4
+    );
+
+
+  const boss=
+    Math.random()<.18;
+
+
+  const m=40;
+
+
+  const e={
+
+    x:0,
+    y:0,
+
+    r:boss ? 17 : 15,
+
+    s:
+      (boss ? 42 : 50)
+      +
+      Math.random()*24,
+
+    hp:
+      boss ? 2 : 1,
+
+    boss,
+
+    age:Math.random()
+
+  };
+
+
+  if(side===0){
+
+    e.x=
+      Math.random()*WORLD_W;
+
+    e.y=-m;
+
+  }
+
+  else if(side===1){
+
+    e.x=WORLD_W+m;
+
+    e.y=
+      Math.random()*WORLD_H;
+
+  }
+
+  else if(side===2){
+
+    e.x=
+      Math.random()*WORLD_W;
+
+    e.y=WORLD_H+m;
+
+  }
+
+  else{
+
+    e.x=-m;
+
+    e.y=
+      Math.random()*WORLD_H;
+
+  }
+
+
+  enemies.push(e);
+
+}
+
+
+// ========================================================
+// アイテム生成
+// ========================================================
+
+function spawnPickup(type){
+
+  pickups.push({
+
+    type,
+
+    x:
+      60+
+      Math.random()*
+      Math.max(
+        1,
+        WORLD_W-120
+      ),
+
+    y:
+      70+
+      Math.random()*
+      Math.max(
+        1,
+        WORLD_H-130
+      ),
+
+    r:15,
+
+    age:0
+
+  });
+
+}
+
+
+// ========================================================
+// 当たり判定
+// ========================================================
+
+const hit=(a,b)=>
+  Math.hypot(
+    a.x-b.x,
+    a.y-b.y
+  )
+  <
+  a.r+b.r;
+
+
+// ========================================================
+// エフェクト
+// ========================================================
+
+function fx(type,x,y){
+
+  particles.push({
+
+    type,
+
+    x,
+    y,
+
+    age:0,
+
+    life:
+      type==="death"
+      ? .65
+      : .42
+
+  });
+
+}
+
+
+// ========================================================
+// 更新
+// ========================================================
+
+function update(dt){
+
+  if(over)return;
+
+
+  if(hp<=0){
+
+    hp=0;
+
+    finish();
+
+    return;
+
+  }
+
+
+  elapsed+=dt;
+
+
+  if(elapsed>=LIMIT){
+
+    finish();
+
+    return;
+
+  }
+
+
+// --------------------------------------------------------
+// 移動
+// --------------------------------------------------------
+
+  let dx=
+    keys.right-
+    keys.left;
+
+
+  let dy=
+    keys.down-
+    keys.up;
+
+
+  let l=
+    Math.hypot(
+      dx,
+      dy
+    );
+
+
+  if(l){
+
+    dx/=l;
+    dy/=l;
+
+
+    lastDir={
+      x:dx,
+      y:dy
+    };
+
+
+    p.x+=
+      dx*
+      190*
+      dt;
+
+
+    p.y+=
+      dy*
+      190*
+      dt;
+
+  }
+
+
+  p.x=Math.max(
+    24,
+    Math.min(
+      WORLD_W-24,
+      p.x
+    )
+  );
+
+
+  p.y=Math.max(
+    45,
+    Math.min(
+      WORLD_H-24,
+      p.y
+    )
+  );
+
+
+  jumpT=Math.max(
+    0,
+    jumpT-dt
+  );
+
+
+  magicT=Math.max(
+    0,
+    magicT-dt
+  );
+
+
+  damageT=Math.max(
+    0,
+    damageT-dt
+  );
+
+
+// --------------------------------------------------------
+// 3分ごとに敵を強化
+// --------------------------------------------------------
+
+  const stage=
+    Math.min(
+      10,
+      Math.floor(
+        elapsed/180
+      )
+    );
+
+
+  const interval=
+    Math.max(
+      .48,
+      2.8-stage*.22
+    );
+
+
+  const maxEnemies=
+    Math.min(
+      36,
+      4+stage*3
+    );
+
+
+  spawnAcc+=dt;
+
+
+  if(
+    spawnAcc>=interval &&
+    enemies.length<maxEnemies
+  ){
+
+    spawnAcc=0;
+
+    edgeSpawn();
+
+  }
+
+
+// --------------------------------------------------------
+// 1分ごとに金貨
+// --------------------------------------------------------
+
+  while(
+    elapsed>=nextCoinTime
+  ){
+
+    spawnPickup("coin");
+
+    nextCoinTime+=60;
+
+  }
+
+
+// --------------------------------------------------------
+// 3分で指輪
+// --------------------------------------------------------
+
+  if(
+    elapsed>=180 &&
+    !ringSpawned &&
+    fireLevel<5
+  ){
+
+    spawnPickup("ring");
+
+    ringSpawned=true;
+
+  }
+
+
+// --------------------------------------------------------
+// 炎
+// --------------------------------------------------------
+
+  for(const s of shots){
+
+    s.x+=s.vx*dt;
+    s.y+=s.vy*dt;
+
+    s.life-=dt;
+
+    s.age+=dt;
+
+  }
+
+
+  shots=shots.filter(
+    s=>
+      s.life>0 &&
+      s.x>-50 &&
+      s.x<WORLD_W+50 &&
+      s.y>-50 &&
+      s.y<WORLD_H+50
+  );
+
+
+// --------------------------------------------------------
+// 敵追尾
+// --------------------------------------------------------
+
+  for(const e of enemies){
+
+    e.age+=dt;
+
+
+    const ax=
+      p.x-e.x;
+
+
+    const ay=
+      p.y-e.y;
+
+
+    const ll=
+      Math.hypot(
+        ax,
+        ay
+      )
+      ||1;
+
+
+    e.x+=
+      ax/ll*
+      e.s*
+      dt;
+
+
+    e.y+=
+      ay/ll*
+      e.s*
+      dt;
+
+  }
+
+
+// --------------------------------------------------------
+// 炎 vs 敵
+// --------------------------------------------------------
+
+  for(
+    let i=enemies.length-1;
+    i>=0;
+    i--
+  ){
+
+    const e=enemies[i];
+
+    let dead=false;
+
+
+    for(
+      let j=shots.length-1;
+      j>=0;
+      j--
+    ){
+
+      if(
+        hit(
+          e,
+          shots[j]
+        )
+      ){
+
+        shots.splice(
+          j,
+          1
+        );
+
+
+        e.hp--;
+
+
+        fx(
+          "hit",
+          e.x,
+          e.y
+        );
+
+
+        if(e.hp<=0){
+
+          score+=
+            e.boss
+            ? 20
+            : 10;
+
+
+          fx(
+            "death",
+            e.x,
+            e.y
+          );
+
+
+          enemies.splice(
+            i,
+            1
+          );
+
+
+          dead=true;
+
+        }
+
+
+        break;
+
+      }
+
+    }
+
+
+// --------------------------------------------------------
+// 敵 vs 主人公
+// --------------------------------------------------------
+
+    if(
+      !dead &&
+      jumpT<=0 &&
+      damageT<=0 &&
+      hit(e,p)
+    ){
+
+      hp=Math.max(
+        0,
+        hp-5
+      );
+
+
+      damageT=.7;
+
+
+      fx(
+        "hit",
+        p.x,
+        p.y
+      );
+
+
+      sHurt();
+
+
+      if(hp<=0){
+
+        hp=0;
+
+        hud();
+
+        finish();
+
+        return;
+
+      }
+
+    }
+
+  }
+
+
+// --------------------------------------------------------
+// アイテム取得
+// --------------------------------------------------------
+
+  for(
+    let i=pickups.length-1;
+    i>=0;
+    i--
+  ){
+
+    const q=
+      pickups[i];
+
+
+    q.age+=dt;
+
+
+    if(
+      hit(
+        p,
+        q
+      )
+    ){
+
+      if(
+        q.type==="coin"
+      ){
+
+        hp=Math.min(
+          100,
+          hp+10
+        );
+
+
+        fx(
+          "heal",
+          p.x,
+          p.y
+        );
+
+
+        sCoin();
+
+      }
+
+      else{
+
+        fireLevel=Math.min(
+          5,
+          fireLevel*2
+        );
+
+
+        sRing();
+
+      }
+
+
+      pickups.splice(
+        i,
+        1
+      );
+
+    }
+
+  }
+
+
+// --------------------------------------------------------
+// エフェクト時間
+// --------------------------------------------------------
+
+  for(const f of particles){
+
+    f.age+=dt;
+
+  }
+
+
+  particles=
+    particles.filter(
+      f=>f.age<f.life
+    );
+
+
+  hud();
+
+}
+
+
+// ========================================================
+// 簡易洋館背景
+// ========================================================
+
+function drawFallbackMansion(){
+
+  G.fillStyle="#171219";
+
+  G.fillRect(
+    0,
+    0,
+    WORLD_W,
+    WORLD_H
+  );
+
+
+  const t=48;
+
+
+  for(
+    let y=0;
+    y<WORLD_H;
+    y+=t
+  ){
+
+    for(
+      let x=0;
+      x<WORLD_W;
+      x+=t
+    ){
+
+      G.fillStyle=
+        (
+          (x/t+y/t)&1
+        )
+        ?
+        "#44383d"
+        :
+        "#54454a";
+
+
+      G.fillRect(
+        x,
+        y,
+        t,
+        t
+      );
+
+    }
+
+  }
+
+
+  G.fillStyle="#681b27";
+
+
+  G.fillRect(
+    WORLD_W*.44,
+    0,
+    WORLD_W*.12,
+    WORLD_H
+  );
+
+
+  G.fillRect(
+    0,
+    WORLD_H*.44,
+    WORLD_W,
+    WORLD_H*.14
+  );
+
+
+  G.strokeStyle="#b9823e";
+
+  G.lineWidth=3;
+
+
+  G.strokeRect(
+    WORLD_W*.44+4,
+    0,
+    WORLD_W*.12-8,
+    WORLD_H
+  );
+
+
+  G.strokeRect(
+    0,
+    WORLD_H*.44+4,
+    WORLD_W,
+    WORLD_H*.14-8
+  );
+
+}
+
+
+// ========================================================
+// 背景
+// ========================================================
+
+function drawBackground(){
+
+  const im=IMG.mansion;
+
+
+  if(
+    im &&
+    im.complete &&
+    im.naturalWidth
+  ){
+
+    const sc=Math.max(
+      WORLD_W/im.naturalWidth,
+      WORLD_H/im.naturalHeight
+    );
+
+
+    const dw=
+      im.naturalWidth*sc;
+
+
+    const dh=
+      im.naturalHeight*sc;
+
+
+    G.drawImage(
+      im,
+
+      (WORLD_W-dw)/2,
+      (WORLD_H-dh)/2,
+
+      dw,
+      dh
+    );
+
+  }
+
+  else{
+
+    drawFallbackMansion();
+
+  }
+
+}
+
+
+// ========================================================
+// PNGフレーム描画
+// ========================================================
+
+function imgFrame(
+  arr,
+  index,
+  x,
+  y,
+  w,
+  h,
+  rot=0
+){
+
+  const im=
+    arr?.[
+      index%
+      arr.length
+    ];
+
+
+  if(
+    !im ||
+    !im.complete ||
+    !im.naturalWidth
+  ){
+    return false;
+  }
+
+
+  G.save();
+
+
+  G.translate(
+    x,
+    y
+  );
+
+
+  if(rot){
+    G.rotate(rot);
+  }
+
+
+  G.drawImage(
+    im,
+    -w/2,
+    -h/2,
+    w,
+    h
+  );
+
+
+  G.restore();
+
+
+  return true;
+
+}
+
+
+// ========================================================
+// 主人公
+// ========================================================
+
+function drawPlayer(){
+
+  let arr=IMG.idle;
+
+  let rate=260;
+
+
+  if(damageT>0){
+
+    arr=IMG.damage;
+
+    rate=80;
+
+  }
+
+  else if(jumpT>0){
+
+    arr=IMG.jump;
+
+    rate=100;
+
+  }
+
+  else if(magicT>0){
+
+    arr=IMG.cast;
+
+    rate=65;
+
+  }
+
+  else if(
+    keys.up ||
+    keys.down ||
+    keys.left ||
+    keys.right
+  ){
+
+    if(
+      Math.abs(lastDir.x)>
+      Math.abs(lastDir.y)
+    ){
+
+      arr=
+        lastDir.x<0
+        ? IMG.left
+        : IMG.right;
+
+    }
+
+    else{
+
+      arr=
+        lastDir.y<0
+        ? IMG.up
+        : IMG.down;
+
+    }
+
+
+    rate=105;
+
+  }
+
+
+  const lift=
+    jumpT
+    ?
+    Math.sin(
+      (1-jumpT/.52)*
+      Math.PI
+    )*
+    26
+    :
+    0;
+
+
+  G.fillStyle="#0007";
+
+
+  G.beginPath();
+
+
+  G.ellipse(
+    p.x,
+    p.y+19,
+    17,
+    5,
+    0,
+    0,
+    7
+  );
+
+
+  G.fill();
+
+
+  imgFrame(
+    arr,
+
+    Math.floor(
+      performance.now()/rate
+    ),
+
+    p.x,
+    p.y-17-lift,
+
+    72,
+    92
+  );
+
+}
+
+
+// ========================================================
+// 魔法陣
+// ========================================================
+
+function drawMagic(){
+
+  if(magicT<=0){
+    return;
+  }
+
+
+  const idx=
+    Math.floor(
+      (.28-magicT)*24
+    )%
+    6;
+
+
+  imgFrame(
+    IMG.circle,
+    idx,
+
+    p.x,
+    p.y+20,
+
+    92,
+    92
+  );
+
+}
+
+
+// ========================================================
+// 敵
+// ========================================================
+
+function drawEnemy(e){
+
+  const arr=
+    e.boss
+    ?
+    IMG.crown
+    :
+    IMG.demon;
+
+
+  const idx=
+    Math.floor(
+      e.age*7
+    )%
+    4;
+
+
+  G.fillStyle="#0007";
+
+
+  G.beginPath();
+
+
+  G.ellipse(
+    e.x,
+    e.y+22,
+    16,
+    5,
+    0,
+    0,
+    7
+  );
+
+
+  G.fill();
+
+
+  imgFrame(
+    arr,
+    idx,
+
+    e.x,
+    e.y,
+
+    56,
+    56
+  );
+
+}
+
+
+// ========================================================
+// 火球
+// ========================================================
+
+function drawShot(s){
+
+  imgFrame(
+    IMG.fire,
+
+    Math.floor(
+      s.age*18
+    )%
+    6,
+
+    s.x,
+    s.y,
+
+    48,
+    32,
+
+    Math.atan2(
+      s.vy,
+      s.vx
+    )
+  );
+
+}
+
+
+// ========================================================
+// 金貨・指輪
+// ========================================================
+
+function drawPickup(q){
+
+  const arr=
+    q.type==="coin"
+    ?
+    IMG.coin
+    :
+    IMG.ring;
+
+
+  const im=
+    arr?.[
+      Math.floor(
+        q.age*7
+      )%
+      4
+    ];
+
+
+  if(
+    !im ||
+    !im.complete ||
+    !im.naturalWidth
+  ){
+    return;
+  }
+
+
+  const maxSize=
+    q.type==="coin"
+    ?
+    42
+    :
+    46;
+
+
+  const scale=Math.min(
+    maxSize/im.naturalWidth,
+    maxSize/im.naturalHeight
+  );
+
+
+  const dw=
+    im.naturalWidth*
+    scale;
+
+
+  const dh=
+    im.naturalHeight*
+    scale;
+
+
+  G.drawImage(
+    im,
+
+    q.x-dw/2,
+    q.y-dh/2,
+
+    dw,
+    dh
+  );
+
+}
+
+
+// ========================================================
+// エフェクト
+// ========================================================
+
+function drawFx(f){
+
+  const arr=
+    IMG[f.type];
+
+
+  if(!arr){
+    return;
+  }
+
+
+  const idx=
+    Math.min(
+
+      arr.length-1,
+
+      Math.floor(
+        (f.age/f.life)*
+        arr.length
+      )
+
+    );
+
+
+  imgFrame(
+    arr,
+    idx,
+
+    f.x,
+    f.y,
+
+    f.type==="death"
+    ? 72
+    : 52,
+
+    f.type==="death"
+    ? 72
+    : 52
+  );
+
+}
+
+
+// ========================================================
+// 描画
+// ========================================================
+
+function render(){
+
+  G.setTransform(
+    DPR,0,
+    0,DPR,
+    0,0
+  );
+
+
+  G.clearRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+
+  G.fillStyle="#08070b";
+
+
+  G.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+
+  G.save();
+
+
+  G.translate(
+    OFF_X,
+    OFF_Y
+  );
+
+
+  G.scale(
+    SCALE,
+    SCALE
+  );
+
+
+  drawBackground();
+
+  drawMagic();
+
+
+  pickups.forEach(
+    drawPickup
+  );
+
+
+  enemies.forEach(
+    drawEnemy
+  );
+
+
+  shots.forEach(
+    drawShot
+  );
+
+
+  particles.forEach(
+    drawFx
+  );
+
+
+  drawPlayer();
+
+
+  G.restore();
+
+}
+
+
+// ========================================================
+// メインループ
+// ========================================================
+
+let prev=
+  performance.now();
+
+
+function loop(now){
+
+  const dt=Math.min(
+
+    .033,
+
+    Math.max(
+      0,
+      (now-prev)/1000
+    )
+
+  );
+
+
+  prev=now;
+
+
+  update(dt);
+
+  render();
+
+
+  requestAnimationFrame(
+    loop
+  );
+
+}
+
+
+reset();
+
+requestAnimationFrame(
+  loop
+);
+</script>
+
+</body>
+</html>
