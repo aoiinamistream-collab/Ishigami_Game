@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>魔法使いの森 Survival</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101a24;font-family:system-ui,-apple-system,sans-serif;touch-action:none}
+#wrap{position:fixed;inset:0;display:grid;place-items:center}
+canvas{width:100vw;height:100vh;display:block;image-rendering:pixelated;background:#5f9c4c}
+#hud{position:fixed;left:12px;top:max(12px,env(safe-area-inset-top));color:#fff;text-shadow:0 2px 3px #000;font-weight:800;pointer-events:none}
+#hud div{margin:3px 0}
+#touch{display:none}
+@media(pointer:coarse){#touch{display:block}}
+.pad{position:fixed;left:18px;bottom:max(22px,env(safe-area-inset-bottom));width:156px;height:156px}
+.btn{position:absolute;width:52px;height:52px;border-radius:14px;border:2px solid #ffffff99;background:#152235aa;color:#fff;font-size:24px;font-weight:900;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
+.up{left:52px}.left{left:0;top:52px}.down{left:52px;top:104px}.right{left:104px;top:52px}
+.actions{position:fixed;right:18px;bottom:max(28px,env(safe-area-inset-bottom));width:170px;height:120px}
+.fire{right:0;top:0;width:72px;height:72px;border-radius:50%;font-size:31px}
+.jump{left:0;bottom:0;width:78px;height:52px;font-size:14px}
+#result{display:none;position:fixed;inset:0;background:#07111bd9;color:#fff;place-items:center;text-align:center}
+#card{background:#14273bea;border:2px solid #ffffff44;border-radius:22px;padding:28px 38px;min-width:240px}
+#card h1{margin:0 0 18px} #card p{font-size:20px;margin:10px}
+#restart{margin-top:16px;padding:12px 24px;border:0;border-radius:12px;font-size:17px;font-weight:800}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game"></canvas></div>
+<div id="hud"><div id="hp">HP 100 / 100</div><div id="score">SCORE 0</div></div>
+<div id="touch">
+ <div class="pad">
+  <div class="btn up" data-key="up">▲</div><div class="btn left" data-key="left">◀</div>
+  <div class="btn down" data-key="down">▼</div><div class="btn right" data-key="right">▶</div>
+ </div>
+ <div class="actions"><div class="btn fire" id="fire">🔥</div><div class="btn jump" id="jump">JUMP</div></div>
+</div>
+<div id="result"><div id="card"><h1>RESULT</h1><p id="last"></p><p id="high"></p><button id="restart">もう一度</button></div></div>
+<script>
+const c=document.getElementById('game'),x=c.getContext('2d');
+let W=0,H=0,D=window.devicePixelRatio||1;
+function resize(){W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0)}
+addEventListener('resize',resize);resize();
+
+const key={up:0,down:0,left:0,right:0};
+let player,enemies,shots,score,hp,lastSpawn,lastHit,gameOver,jumpT,facing;
+function reset(){
+ player={x:W/2,y:H/2,r:17}; enemies=[];shots=[];score=0;hp=100;
+ lastSpawn=0;lastHit=0;gameOver=false;jumpT=0;facing={x:1,y:0};
+ document.getElementById('result').style.display='none'; updateHud();
+}
+function updateHud(){hpEl.textContent=`HP ${hp} / 100`;scoreEl.textContent=`SCORE ${score}`}
+const hpEl=document.getElementById('hp'),scoreEl=document.getElementById('score');
+
+function spawn(){
+ let side=Math.floor(Math.random()*4),m=35,e={x:0,y:0,r:15,s:55+Math.random()*30};
+ if(side===0){e.x=Math.random()*W;e.y=-m} if(side===1){e.x=W+m;e.y=Math.random()*H}
+ if(side===2){e.x=Math.random()*W;e.y=H+m} if(side===3){e.x=-m;e.y=Math.random()*H}
+ enemies.push(e);
+}
+function attack(tx,ty){
+ if(gameOver)return;
+ let dx=tx-player.x,dy=ty-player.y,l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;facing={x:dx,y:dy};
+ shots.push({x:player.x+dx*23,y:player.y+dy*23,vx:dx*430,vy:dy*430,r:9,life:1.3});
+}
+function jump(){if(!gameOver && jumpT<=0)jumpT=.52}
+function end(){
+ gameOver=true;let hi=Math.max(+localStorage.getItem('forestHigh')||0,score);
+ localStorage.setItem('forestHigh',hi);last.textContent=`今回のスコア：${score}`;high.textContent=`ハイスコア：${hi}`;
+ result.style.display='grid';
+}
+restart.onclick=reset;
+
+addEventListener('keydown',e=>{
+ if(e.code==='KeyW')key.up=1;if(e.code==='KeyS')key.down=1;if(e.code==='KeyA')key.left=1;if(e.code==='KeyD')key.right=1;
+ if(e.code==='Space'){e.preventDefault();jump()}
+});
+addEventListener('keyup',e=>{if(e.code==='KeyW')key.up=0;if(e.code==='KeyS')key.down=0;if(e.code==='KeyA')key.left=0;if(e.code==='KeyD')key.right=0});
+c.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0)attack(e.clientX,e.clientY)});
+document.querySelectorAll('[data-key]').forEach(b=>{
+ const k=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();key[k]=1;b.setPointerCapture(e.pointerId)});
+ b.addEventListener('pointerup',()=>key[k]=0);b.addEventListener('pointercancel',()=>key[k]=0);
+});
+fire.addEventListener('pointerdown',e=>{e.preventDefault();attack(player.x+facing.x*100,player.y+facing.y*100)});
+jump.addEventListener('pointerdown',e=>{e.preventDefault();jump()});
+
+function circleHit(a,b){return Math.hypot(a.x-b.x,a.y-b.y)<a.r+b.r}
+function update(dt,t){
+ if(gameOver)return;
+ let dx=key.right-key.left,dy=key.down-key.up,l=Math.hypot(dx,dy);
+ if(l){dx/=l;dy/=l;facing={x:dx,y:dy};player.x+=dx*190*dt;player.y+=dy*190*dt}
+ player.x=Math.max(22,Math.min(W-22,player.x));player.y=Math.max(38,Math.min(H-22,player.y));
+ if(jumpT>0)jumpT=Math.max(0,jumpT-dt);
+ if(t-lastSpawn>Math.max(.55,1.45-score*.002)){spawn();lastSpawn=t}
+ shots.forEach(s=>{s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt});shots=shots.filter(s=>s.life>0);
+ for(let e of enemies){let ax=player.x-e.x,ay=player.y-e.y,al=Math.hypot(ax,ay)||1;e.x+=ax/al*e.s*dt;e.y+=ay/al*e.s*dt}
+ for(let i=enemies.length-1;i>=0;i--){
+  let e=enemies[i],dead=false;
+  for(let j=shots.length-1;j>=0;j--)if(circleHit(e,shots[j])){shots.splice(j,1);enemies.splice(i,1);score+=10;dead=true;updateHud();break}
+  if(!dead && jumpT<=0 && circleHit(e,player) && t-lastHit>.7){hp=Math.max(0,hp-5);lastHit=t;updateHud();if(hp<=0)end()}
+ }
+}
+function drawField(){
+ x.fillStyle='#6fa956';x.fillRect(0,0,W,H);
+ // simple flat checker/grass texture
+ x.fillStyle='#649d4e';for(let yy=0;yy<H;yy+=64)for(let xx=0;xx<W;xx+=64)if(((xx+yy)/64)%2===0)x.fillRect(xx,yy,64,64);
+ x.fillStyle='#7db360';for(let i=0;i<35;i++){let xx=(i*137)%W,yy=(i*83)%H;x.fillRect(xx,yy,3,9);x.fillRect(xx-3,yy+4,3,3)}
+}
+function drawPlayer(){
+ let lift=jumpT>0?Math.sin((jumpT/.52)*Math.PI)*24:0,px=player.x,py=player.y-lift;
+ x.save();x.translate(Math.round(px),Math.round(py));
+ // shadow
+ x.fillStyle='#29462c88';x.beginPath();x.ellipse(0,20+lift,18,7,0,0,7);x.fill();
+ // legs/boots
+ x.fillStyle='#241c2d';x.fillRect(-12,10,8,16);x.fillRect(4,10,8,16);
+ // coat
+ x.fillStyle='#7d2635';x.fillRect(-15,-8,30,23);x.fillStyle='#2a2130';x.fillRect(-11,-4,22,18);
+ // white hair
+ x.fillStyle='#e8e4ee';x.fillRect(-15,-30,30,24);x.fillRect(-19,-22,7,25);x.fillRect(12,-22,7,25);
+ // face
+ x.fillStyle='#f3c6b5';x.fillRect(-10,-21,20,14);x.fillStyle='#342437';x.fillRect(-6,-17,3,3);x.fillRect(4,-17,3,3);
+ // bow
+ x.fillStyle='#181522';x.fillRect(-17,-34,8,7);x.fillRect(9,-34,8,7);x.fillRect(-5,-32,10,5);
+ // casting hand
+ x.fillStyle='#f3c6b5';x.fillRect(facing.x>=0?14:-19,-3,5,5);
+ x.restore();
+}
+function drawEnemy(e){
+ x.save();x.translate(e.x,e.y);x.fillStyle='#fff';x.beginPath();x.arc(0,0,e.r,0,7);x.fill();
+ x.strokeStyle='#d9dfe8';x.lineWidth=2;x.stroke();x.fillStyle='#26303a';x.fillRect(-7,-4,3,4);x.fillRect(4,-4,3,4);
+ x.fillRect(-4,5,8,2);x.restore();
+}
+function drawShot(s){
+ x.fillStyle='#ffcf49';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();x.fillStyle='#ff6b2c';x.beginPath();x.arc(s.x-3,s.y+2,s.r*.55,0,7);x.fill()
+}
+function render(){drawField();enemies.forEach(drawEnemy);shots.forEach(drawShot);drawPlayer()}
+let prev=performance.now();
+function loop(now){let dt=Math.min(.033,(now-prev)/1000);prev=now;update(dt,now/1000);render();requestAnimationFrame(loop)}
+reset();requestAnimationFrame(loop);
+</script>
+</body></html>
