@@ -8,7 +8,7 @@
 <style>
 :root{--sat:env(safe-area-inset-top,0px);--sar:env(safe-area-inset-right,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08070b;touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;font-family:ui-monospace,Menlo,Consolas,monospace}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08070b;touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;font-family:ui-monospace,Menlo,Consolas,monospace}
 #wrap{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;background:#08070b}
 canvas{position:absolute;inset:0;display:block;image-rendering:pixelated}
 #hud{position:absolute;z-index:5;top:calc(8px + var(--sat));left:calc(10px + var(--sal));color:#fff;font-weight:900;text-shadow:2px 2px #000;pointer-events:none;font-size:clamp(12px,2.5vw,18px)}
@@ -18,9 +18,10 @@ canvas{position:absolute;inset:0;display:block;image-rendering:pixelated}
 #buff{color:#ffd55b}
 #touch{position:absolute;inset:0;z-index:12;pointer-events:none;display:none}
 @media(pointer:coarse),(max-width:900px){#touch{display:block}}
-.pad{position:absolute;left:calc(14px + var(--sal));bottom:calc(16px + var(--sab));width:150px;height:150px;pointer-events:auto}
-.btn{position:absolute;width:50px;height:50px;border:2px solid #ffffffa8;border-radius:13px;background:#111522c9;color:#fff;display:grid;place-items:center;font-size:22px;font-weight:900;user-select:none;-webkit-user-select:none}
-.up{left:50px}.left{left:0;top:50px}.down{left:50px;top:100px}.right{left:100px;top:50px}
+.pad{position:absolute;left:calc(14px + var(--sal));bottom:calc(16px + var(--sab));width:154px;height:154px;pointer-events:auto;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#stickBase{position:absolute;left:7px;top:7px;width:140px;height:140px;border-radius:50%;border:2px solid #ffffff75;background:#10152278;box-shadow:inset 0 0 24px #0009;pointer-events:none}
+#stickKnob{position:absolute;left:45px;top:45px;width:64px;height:64px;border-radius:50%;border:2px solid #ffffffb8;background:#28344ee0;box-shadow:0 4px 14px #0009,inset 0 0 12px #ffffff18;pointer-events:none;transform:translate(0px,0px)}
+.btn{position:absolute;width:50px;height:50px;border:2px solid #ffffffa8;border-radius:13px;background:#111522c9;color:#fff;display:grid;place-items:center;font-size:22px;font-weight:900;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
 .actions{position:absolute;right:calc(14px + var(--sar));bottom:calc(18px + var(--sab));width:178px;height:122px;pointer-events:auto}
 #fire{right:0;top:0;width:76px;height:76px;border-radius:50%;background:#87291ee6;font-size:30px}
 #jump{left:0;bottom:0;width:82px;background:#245696e6;font-size:13px}
@@ -39,9 +40,8 @@ canvas{position:absolute;inset:0;display:block;image-rendering:pixelated}
  <div class="row">TIME <span id="timeText">60:00</span>　<span id="buff">🔥 ×1</span></div>
 </div>
 <div id="touch">
- <div class="pad">
-  <div class="btn up" data-dir="up">▲</div><div class="btn left" data-dir="left">◀</div>
-  <div class="btn down" data-dir="down">▼</div><div class="btn right" data-dir="right">▶</div>
+ <div class="pad" id="stickZone" aria-label="移動スティック">
+  <div id="stickBase"></div><div id="stickKnob"></div>
  </div>
  <div class="actions"><div class="btn" id="fire">🔥</div><div class="btn" id="jump">JUMP</div></div>
 </div>
@@ -139,6 +139,7 @@ seq("coin","items/coin_",4);seq("ring","items/ring_",4);
 load("mansion","background/mansion_sample_map.png");
 
 const keys={up:0,down:0,left:0,right:0};
+const analog={active:false,pointerId:null,x:0,y:0};
 const LIMIT=3600;
 let p,enemies,shots,pickups,particles,hp,score,elapsed,nextCoinTime,ringSpawned,fireLevel,jumpT,magicT,damageT,lastDir,over,spawnAcc;
 let ACtx=null;
@@ -194,14 +195,28 @@ addEventListener("keydown",e=>{
 addEventListener("keyup",e=>setKey(e.code,0));
 C.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse"&&e.button===0)fire()});
 
-document.querySelectorAll("[data-dir]").forEach(b=>{
- const d=b.dataset.dir;
- const off=()=>keys[d]=0;
- b.addEventListener("pointerdown",e=>{e.preventDefault();keys[d]=1;b.setPointerCapture?.(e.pointerId)});
- b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
-});
+const stickZone=E("stickZone"),stickKnob=E("stickKnob");
+function updateStick(clientX,clientY){
+ const r=stickZone.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+ let dx=clientX-cx,dy=clientY-cy;const max=r.width*.34,dist=Math.hypot(dx,dy);
+ if(dist>max){dx=dx/dist*max;dy=dy/dist*max}
+ const dead=max*.12,d=Math.hypot(dx,dy);
+ if(d<=dead){analog.x=0;analog.y=0}else{analog.x=dx/d;analog.y=dy/d}
+ stickKnob.style.transform=`translate(${dx}px,${dy}px)`;
+}
+function releaseStick(id){
+ if(analog.pointerId!==null&&id!==undefined&&id!==analog.pointerId)return;
+ analog.active=false;analog.pointerId=null;analog.x=0;analog.y=0;stickKnob.style.transform="translate(0px,0px)";
+}
+stickZone.addEventListener("pointerdown",e=>{e.preventDefault();analog.active=true;analog.pointerId=e.pointerId;stickZone.setPointerCapture?.(e.pointerId);updateStick(e.clientX,e.clientY)});
+stickZone.addEventListener("pointermove",e=>{if(!analog.active||e.pointerId!==analog.pointerId)return;e.preventDefault();updateStick(e.clientX,e.clientY)});
+stickZone.addEventListener("pointerup",e=>releaseStick(e.pointerId));
+stickZone.addEventListener("pointercancel",e=>releaseStick(e.pointerId));
+stickZone.addEventListener("lostpointercapture",e=>releaseStick(e.pointerId));
 E("fire").addEventListener("pointerdown",e=>{e.preventDefault();fire()});
 E("jump").addEventListener("pointerdown",e=>{e.preventDefault();doJump()});
+const gameArea=E("wrap");
+["contextmenu","selectstart","dragstart"].forEach(type=>gameArea.addEventListener(type,e=>e.preventDefault()));
 
 function doJump(){if(over||jumpT>0)return;jumpT=.52;sJump()}
 function fire(){
@@ -230,7 +245,7 @@ function update(dt){
  if(hp<=0){hp=0;finish();return}
  elapsed+=dt;if(elapsed>=LIMIT){finish();return}
 
- let dx=keys.right-keys.left,dy=keys.down-keys.up,l=Math.hypot(dx,dy);
+ let dx=analog.active?analog.x:keys.right-keys.left,dy=analog.active?analog.y:keys.down-keys.up,l=Math.hypot(dx,dy);
  if(l){dx/=l;dy/=l;lastDir={x:dx,y:dy};p.x+=dx*190*dt;p.y+=dy*190*dt}
  p.x=Math.max(24,Math.min(WORLD_W-24,p.x));p.y=Math.max(45,Math.min(WORLD_H-24,p.y));
  jumpT=Math.max(0,jumpT-dt);magicT=Math.max(0,magicT-dt);damageT=Math.max(0,damageT-dt);
@@ -305,7 +320,7 @@ function drawPlayer(){
  if(damageT>0){arr=IMG.damage;rate=80}
  else if(jumpT>0){arr=IMG.jump;rate=100}
  else if(magicT>0){arr=IMG.cast;rate=65}
- else if(keys.up||keys.down||keys.left||keys.right){
+ else if(analog.active||keys.up||keys.down||keys.left||keys.right){
   if(Math.abs(lastDir.x)>Math.abs(lastDir.y))arr=lastDir.x<0?IMG.left:IMG.right;
   else arr=lastDir.y<0?IMG.up:IMG.down;rate=105;
  }
