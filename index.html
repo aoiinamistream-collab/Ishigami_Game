@@ -8,8 +8,8 @@
 <style>
 :root{--sat:env(safe-area-inset-top,0px);--sar:env(safe-area-inset-right,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08070b;touch-action:none;overscroll-behavior:none;font-family:ui-monospace,Menlo,Consolas,monospace}
-#wrap{position:fixed;inset:0;overflow:hidden;background:#08070b}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08070b;touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;font-family:ui-monospace,Menlo,Consolas,monospace}
+#wrap{position:fixed;left:0;top:0;width:100vw;height:100vh;width:100dvw;height:100dvh;overflow:hidden;background:#08070b}
 canvas{position:absolute;inset:0;display:block;image-rendering:pixelated}
 #hud{position:absolute;z-index:5;top:calc(8px + var(--sat));left:calc(10px + var(--sal));color:#fff;font-weight:900;text-shadow:2px 2px #000;pointer-events:none;font-size:clamp(12px,2.5vw,18px)}
 #title{font-size:1.08em;margin-bottom:5px}.row{margin:2px 0;white-space:nowrap}
@@ -51,6 +51,18 @@ canvas{position:absolute;inset:0;display:block;image-rendering:pixelated}
 </div>
 <script>
 "use strict";
+
+// iPhone/iPad: ゲーム操作中のダブルタップズーム／ピンチズームを抑止
+let lastTouchEnd = 0;
+document.addEventListener("touchend", e => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 350) e.preventDefault();
+  lastTouchEnd = now;
+}, {passive:false});
+document.addEventListener("gesturestart", e => e.preventDefault(), {passive:false});
+document.addEventListener("gesturechange", e => e.preventDefault(), {passive:false});
+document.addEventListener("gestureend", e => e.preventDefault(), {passive:false});
+
 const C=document.getElementById("game"),G=C.getContext("2d"),E=id=>document.getElementById(id);
 const hpFill=E("hpFill"),hpText=E("hpText"),scoreText=E("scoreText"),hiText=E("hiText"),timeText=E("timeText"),buff=E("buff");
 const result=E("result"),lastScore=E("lastScore"),highScore=E("highScore"),restart=E("restart");
@@ -61,6 +73,11 @@ function resize(){
  W=Math.max(1,Math.round(vv?vv.width:innerWidth));
  H=Math.max(1,Math.round(vv?vv.height:innerHeight));
  DPR=Math.min(devicePixelRatio||1,2);
+ const vv2=window.visualViewport;
+ const ox=vv2?vv2.offsetLeft:0, oy=vv2?vv2.offsetTop:0;
+ const wrap=document.getElementById("wrap");
+ wrap.style.left=ox+"px";wrap.style.top=oy+"px";
+ wrap.style.width=W+"px";wrap.style.height=H+"px";
  C.style.width=W+"px";C.style.height=H+"px";
  C.width=Math.round(W*DPR);C.height=Math.round(H*DPR);
  G.setTransform(DPR,0,0,DPR,0,0);
@@ -69,10 +86,21 @@ function resize(){
    p.y=Math.min(H-25,Math.max(55,p.y));
  }
 }
-addEventListener("resize",resize,{passive:true});
-addEventListener("orientationchange",()=>setTimeout(resize,120),{passive:true});
-visualViewport?.addEventListener("resize",resize,{passive:true});
-visualViewport?.addEventListener("scroll",resize,{passive:true});
+let resizeTimer=0;
+function scheduleResize(){
+  clearTimeout(resizeTimer);
+  // iOSは回転直後、アドレスバー込みの古いviewport値を一時的に返すため複数回再計算
+  resize();
+  resizeTimer=setTimeout(resize,80);
+  setTimeout(resize,180);
+  setTimeout(resize,350);
+  setTimeout(resize,650);
+}
+addEventListener("resize",scheduleResize,{passive:true});
+addEventListener("orientationchange",scheduleResize,{passive:true});
+visualViewport?.addEventListener("resize",scheduleResize,{passive:true});
+visualViewport?.addEventListener("scroll",scheduleResize,{passive:true});
+screen.orientation?.addEventListener?.("change",scheduleResize);
 
 const AS="assets/";
 const IMG={};
@@ -262,12 +290,12 @@ function drawPlayer(){
  }
  const lift=jumpT?Math.sin((1-jumpT/.52)*Math.PI)*26:0;
  G.fillStyle="#0007";G.beginPath();G.ellipse(p.x,p.y+19,17,5,0,0,7);G.fill();
- imgFrame(arr,Math.floor(performance.now()/rate),p.x,p.y-15-lift,66,78);
+ imgFrame(arr,Math.floor(performance.now()/rate),p.x,p.y-17-lift,72,92);
 }
 function drawMagic(){
  if(magicT<=0)return;
  const idx=Math.floor((.28-magicT)*24)%6;
- imgFrame(IMG.circle,idx,p.x,p.y+18,88,58);
+ imgFrame(IMG.circle,idx,p.x,p.y+20,92,92);
 }
 function drawEnemy(e){
  const arr=e.boss?IMG.crown:IMG.demon,idx=Math.floor(e.age*7)%4;
