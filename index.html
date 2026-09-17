@@ -64,13 +64,15 @@ function resize(){
  C.style.width=W+"px";C.style.height=H+"px";
  C.width=Math.round(W*DPR);C.height=Math.round(H*DPR);
  G.setTransform(DPR,0,0,DPR,0,0);
- if(p){p.x=Math.min(W-25,Math.max(25,p.x));p.y=Math.min(H-25,Math.max(55,p.y))}
+ if(typeof p !== "undefined" && p){
+   p.x=Math.min(W-25,Math.max(25,p.x));
+   p.y=Math.min(H-25,Math.max(55,p.y));
+ }
 }
 addEventListener("resize",resize,{passive:true});
 addEventListener("orientationchange",()=>setTimeout(resize,120),{passive:true});
 visualViewport?.addEventListener("resize",resize,{passive:true});
 visualViewport?.addEventListener("scroll",resize,{passive:true});
-resize();
 
 const AS="assets/";
 const IMG={};
@@ -91,6 +93,7 @@ const keys={up:0,down:0,left:0,right:0};
 const LIMIT=3600;
 let p,enemies,shots,pickups,particles,hp,score,elapsed,nextCoinTime,ringSpawned,fireLevel,jumpT,magicT,damageT,lastDir,over,spawnAcc;
 let ACtx=null;
+resize();
 
 function sound(f,d,type="square",vol=.03,end=f){
  try{
